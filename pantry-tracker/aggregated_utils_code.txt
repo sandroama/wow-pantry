@@ -1,0 +1,187 @@
+File: auth.js
+
+import { auth } from './firebase';
+import { GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
+
+export const signInWithGoogle = async () => {
+  const provider = new GoogleAuthProvider();
+  try {
+    await signInWithPopup(auth, provider);
+  } catch (error) {
+    console.error("Error signing in with Google", error);
+    throw error;
+  }
+};
+
+export const signOut = async () => {
+  try {
+    await firebaseSignOut(auth);
+  } catch (error) {
+    console.error("Error signing out", error);
+    throw error;
+  }
+};
+
+File: llamaApi.js
+
+import OpenAI from "openai";
+
+const LLAMA_API_KEY = process.env.NEXT_PUBLIC_LLAMA_API_KEY;
+const OPENAI_API_KEY = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
+
+const llamaClient = new OpenAI({
+  baseURL: "https://openrouter.ai/api/v1",
+  apiKey: LLAMA_API_KEY,
+  defaultHeaders: {
+    "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL,
+    "X-Title": process.env.NEXT_PUBLIC_SITE_NAME,
+  }
+});
+
+const openaiClient = new OpenAI({
+  apiKey: OPENAI_API_KEY,
+});
+
+export async function getLlamaResponse(prompt) {
+  try {
+    const completion = await llamaClient.chat.completions.create({
+      model: "meta-llama/llama-3.1-8b-instruct:free",
+      messages: [
+        { role: "user", content: prompt }
+      ],
+    });
+
+    return completion.choices[0].message.content || "";
+  } catch (error) {
+    console.error('Error calling Llama API:', error);
+    console.log('Falling back to GPT-3.5...');
+    return getGPT35Response(prompt);
+  }
+}
+
+async function getGPT35Response(prompt) {
+  try {
+    const completion = await openaiClient.completions.create({
+      model: "gpt-3.5-turbo-instruct",
+      prompt: prompt,
+      max_tokens: 256,
+      temperature: 1,
+      top_p: 1,
+      frequency_penalty: 0,
+      presence_penalty: 0,
+    });
+
+    return completion.choices[0].text || "";
+  } catch (error) {
+    console.error('Error calling GPT-3.5 API:', error);
+    throw error;
+  }
+}
+
+File: theme.js
+
+import { createTheme } from '@mui/material/styles';
+
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#3498db',
+      contrastText: '#ffffff',
+    },
+    secondary: {
+      main: '#2ecc71',
+    },
+    background: {
+      default: '#ecf0f1',
+      paper: '#ffffff',
+    },
+    text: {
+      primary: '#2c3e50',
+      secondary: '#7f8c8d',
+    },
+    error: {
+      main: '#e74c3c',
+    },
+  },
+  components: {
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#3498db',
+        },
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+          fontWeight: 'bold',
+          borderRadius: '8px',
+        },
+        containedPrimary: {
+          backgroundColor: '#2ecc71',
+          '&:hover': {
+            backgroundColor: '#27ae60',
+          },
+        },
+      },
+    },
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          '& .MuiOutlinedInput-root': {
+            borderRadius: '8px',
+          },
+        },
+      },
+    },
+    MuiList: {
+      styleOverrides: {
+        root: {
+          borderRadius: '8px',
+          overflow: 'hidden',
+        },
+      },
+    },
+    MuiListItem: {
+      styleOverrides: {
+        root: {
+          '&:hover': {
+            backgroundColor: '#f5f5f5',
+          },
+        },
+      },
+    },
+  },
+});
+
+export default theme;
+
+File: firebase.js
+
+import { initializeApp, getApps } from 'firebase/app';
+import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getAuth, connectAuthEmulator } from 'firebase/auth';
+
+const firebaseConfig = {
+    apiKey: "AIzaSyDOu-4Uv6NBDKpeIMlh6KZ03FQ1gcBnUm4",
+    authDomain: "wowpantry.firebaseapp.com",
+    projectId: "wowpantry",
+    storageBucket: "wowpantry.appspot.com",
+    messagingSenderId: "223141110008",
+    appId: "1:223141110008:web:b9498fda0a7fd715ed9b0d",
+    measurementId: "G-Q6BXLWLZ88"
+  };
+
+// Initialize Firebase
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+if (process.env.NODE_ENV === 'development') {
+  connectFirestoreEmulator(db, 'localhost', 8080);
+  connectAuthEmulator(auth, 'http://localhost:9099');
+}
+
+export { db, auth };
+
