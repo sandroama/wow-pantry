@@ -1,3 +1,4 @@
+Folder: src/utils
 File: auth.js
 
 import { auth } from './firebase';
@@ -22,62 +23,7 @@ export const signOut = async () => {
   }
 };
 
-File: llamaApi.js
-
-import OpenAI from "openai";
-
-const LLAMA_API_KEY = process.env.NEXT_PUBLIC_LLAMA_API_KEY;
-const OPENAI_API_KEY = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
-
-const llamaClient = new OpenAI({
-  baseURL: "https://openrouter.ai/api/v1",
-  apiKey: LLAMA_API_KEY,
-  defaultHeaders: {
-    "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL,
-    "X-Title": process.env.NEXT_PUBLIC_SITE_NAME,
-  }
-});
-
-const openaiClient = new OpenAI({
-  apiKey: OPENAI_API_KEY,
-});
-
-export async function getLlamaResponse(prompt) {
-  try {
-    const completion = await llamaClient.chat.completions.create({
-      model: "meta-llama/llama-3.1-8b-instruct:free",
-      messages: [
-        { role: "user", content: prompt }
-      ],
-    });
-
-    return completion.choices[0].message.content || "";
-  } catch (error) {
-    console.error('Error calling Llama API:', error);
-    console.log('Falling back to GPT-3.5...');
-    return getGPT35Response(prompt);
-  }
-}
-
-async function getGPT35Response(prompt) {
-  try {
-    const completion = await openaiClient.completions.create({
-      model: "gpt-3.5-turbo-instruct",
-      prompt: prompt,
-      max_tokens: 256,
-      temperature: 1,
-      top_p: 1,
-      frequency_penalty: 0,
-      presence_penalty: 0,
-    });
-
-    return completion.choices[0].text || "";
-  } catch (error) {
-    console.error('Error calling GPT-3.5 API:', error);
-    throw error;
-  }
-}
-
+Folder: src/utils
 File: theme.js
 
 import { createTheme } from '@mui/material/styles';
@@ -157,6 +103,19 @@ const theme = createTheme({
 
 export default theme;
 
+Folder: src/utils
+File: image-loader.js
+
+export default function imageLoader({ src, width, quality }) {
+    if (src.startsWith('https://') || src.startsWith('http://')) {
+      // For external URLs, return the URL as is
+      return src;
+    }
+    // For internal images, use your custom logic (adjust as needed)
+    return `https://your-internal-image-host.com/${src}?w=${width}&q=${quality || 75}`
+  }
+
+Folder: src/utils
 File: firebase.js
 
 import { initializeApp, getApps } from 'firebase/app';

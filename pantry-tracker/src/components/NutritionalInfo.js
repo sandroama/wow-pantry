@@ -37,18 +37,17 @@ const NutritionalInfo = ({ items }) => {
   const formatNutritionalInfo = (infoText) => {
     const lines = infoText.split('\n');
     return lines.map((line, index) => {
-      if (line.startsWith('##')) {
-        return <Typography key={index} variant="h6">{line.replace('##', '')}</Typography>;
-      } else if (line.startsWith('*')) {
-        return <Typography key={index} variant="body1" component="li">{line.replace('*', '').trim()}</Typography>;
-      } else if (line.includes('**')) {
-        return (
-          <Typography key={index} variant="body1">
-            {line.split('**').map((part, i) => 
-              i % 2 === 0 ? part : <strong key={i}>{part}</strong>
-            )}
-          </Typography>
-        );
+      line = line.replace(/\*\*/g, ''); // Remove all asterisks
+      if (line.startsWith('Calories:')) {
+        return <Typography key={index} variant="subtitle1" fontWeight="bold">{line}</Typography>;
+      } else if (line.startsWith('Macronutrients:')) {
+        return <Typography key={index} variant="subtitle1" fontWeight="bold" sx={{ mt: 1 }}>{line}</Typography>;
+      } else if (line.startsWith('Notable vitamins and minerals:')) {
+        return <Typography key={index} variant="subtitle1" fontWeight="bold" sx={{ mt: 1 }}>{line}</Typography>;
+      } else if (line.startsWith('Note:')) {
+        return <Typography key={index} variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>{line}</Typography>;
+      } else if (line.trim().startsWith('-')) {
+        return <Typography key={index} variant="body1" component="li" sx={{ ml: 2 }}>{line.trim().substring(1)}</Typography>;
       } else {
         return <Typography key={index} variant="body1">{line}</Typography>;
       }

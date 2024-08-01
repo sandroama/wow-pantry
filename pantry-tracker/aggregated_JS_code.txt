@@ -1,0 +1,932 @@
+Folder: src/app
+File: layout.js
+
+import ThemeRegistry from '@/components/ThemeRegistry'
+
+export const metadata = {
+  title: 'Pantry Tracker',
+  description: 'Track your pantry items and get recipe suggestions',
+}
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body>
+        <ThemeRegistry>{children}</ThemeRegistry>
+      </body>
+    </html>
+  )
+}
+
+Folder: src/app
+File: page.js
+
+'use client'
+
+import React, { useState, useEffect } from 'react';
+import { auth } from '../utils/firebase';
+import IntroPage from '../components/IntroPage';
+import Home from '../components/Home'; // We'll create this in the next step
+
+export default function Page() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setUser(user);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  if (loading) {
+    return <div>Loading...</div>; // Or a loading spinner
+  }
+
+  return user ? <Home user={user} /> : <IntroPage />;
+}
+
+Folder: src/app/waitlist
+File: page.js
+
+'use client'
+
+import React from 'react';
+import { Box, Typography, Container } from '@mui/material';
+
+export default function Waitlist() {
+  return (
+    <Container>
+      <Box sx={{ mt: 4 }}>
+        <Typography variant="h4" gutterBottom>
+          Join our Feature Waitlist
+        </Typography>
+        <Typography variant="body1">
+          Thank you for your interest! We're currently working on exciting new features. 
+          Please check back later for updates on how to join our waitlist.
+        </Typography>
+      </Box>
+    </Container>
+  );
+}
+
+Folder: src/app/dashboard
+File: page.js
+
+'use client'
+
+import React from 'react';
+import Home from '../../components/Home'; // Assuming your main app component is named Home
+
+export default function Dashboard() {
+  return <Home />;
+}
+
+Folder: src/app/api/generateRecipeGemini
+File: route.js
+
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+export async function POST(req) {
+  try {
+    const { ingredients } = await req.json();
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const prompt = `Given these ingredients: ${ingredients}, suggest a recipe that uses as many of these ingredients as possible. Provide the recipe name, ingredients list, and step-by-step instructions.`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const recipe = response.text();
+
+    return new Response(JSON.stringify({ recipe }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('Error calling Gemini API:', error);
+    return new Response(JSON.stringify({ error: 'Error generating recipe' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+}
+
+Folder: src/app/api/getNutritionalInfo
+File: route.js
+
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+export async function POST(req) {
+  try {
+    const { item } = await req.json();
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const prompt = `Provide brief nutritional information for ${item.weight} ${item.unit} of ${item.name}. Include calories, macronutrients, and any notable vitamins or minerals. Keep it concise.`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const info = response.text();
+
+    return new Response(JSON.stringify({ info }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('Error calling Gemini API:', error);
+    return new Response(JSON.stringify({ error: 'Error fetching nutritional information' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+}
+
+Folder: src/app/api/generateRecipe
+File: route.js
+
+// File: src/app/api/generateRecipe/route.js
+
+import OpenAI from "openai";
+
+const openai = new OpenAI({
+  baseURL: "https://openrouter.ai/api/v1",
+  apiKey: process.env.LLAMA_API_KEY,
+  defaultHeaders: {
+    "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL,
+    "X-Title": process.env.NEXT_PUBLIC_SITE_NAME,
+  }
+});
+
+export async function POST(req) {
+  try {
+    const { ingredients, prompt } = await req.json();
+
+    const completion = await openai.chat.completions.create({
+      model: "meta-llama/llama-3.1-8b-instruct:free",
+      messages: [
+        { role: "user", content: prompt }
+      ],
+    });
+
+    return new Response(JSON.stringify({ recipe: completion.choices[0].message.content }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('Error calling Llama API:', error);
+    return new Response(JSON.stringify({ error: 'Error generating recipe' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+}
+
+Folder: src/components
+File: IntroPage.js
+
+'use client'
+
+import React from 'react';
+import { Box, Typography, Button, Container, Grid } from '@mui/material';
+import CustomImage from './CustomImage'
+import { useRouter } from 'next/navigation';
+
+const IntroPage = () => {
+  const router = useRouter();
+
+  return (
+    <Box sx={{ bgcolor: '#1A1A1A', minHeight: '100vh', color: 'white', py: 4 }}>
+      <Container maxWidth="lg">
+        <Grid container spacing={4} alignItems="center">
+          <Grid item xs={12} md={6}>
+            <CustomImage
+              src="https://png.pngtree.com/png-vector/20230728/ourmid/pngtree-food-pantry-vector-png-image_6993223.png"
+              alt="WowPantry"
+              width={500}
+              height={500}
+              layout="responsive"
+            />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Typography variant="h2" component="h1" gutterBottom>
+              WowPantry
+            </Typography>
+            <Typography variant="h5" gutterBottom>
+              Manage pantry items and track nutrition
+            </Typography>
+            <Box sx={{ mt: 4 }}>
+              <Button
+                variant="contained"
+                color="primary"
+                size="large"
+                onClick={() => router.push('/dashboard')}
+                sx={{ mr: 2, mb: 2 }}
+              >
+                Go to Dashboard
+              </Button>
+              <Button
+                variant="outlined"
+                color="secondary"
+                size="large"
+                onClick={() => router.push('/waitlist')}
+                sx={{ mb: 2 }}
+              >
+                Join Feature Waitlist
+              </Button>
+            </Box>
+          </Grid>
+        </Grid>
+      </Container>
+    </Box>
+  );
+};
+
+export default IntroPage;
+
+Folder: src/components
+File: PantryItem.js
+
+import React, { useState } from 'react';
+import { ListItem, ListItemText, IconButton, TextField, Box, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
+import SaveIcon from '@mui/icons-material/Save';
+
+const PantryItem = ({ item, onDeleteItem, onUpdateItem }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedItem, setEditedItem] = useState(item);
+
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleSave = () => {
+    if (editedItem.amount <= 0) {
+      alert("Amount must be greater than 0");
+      return;
+    }
+    onUpdateItem(editedItem);
+    setIsEditing(false);
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setEditedItem(prev => ({
+      ...prev,
+      [name]: name === 'amount' ? Number(value) : value
+    }));
+  };
+
+  const units = ['piece', 'lb', 'oz', 'g', 'kg', 'ml', 'L', 'cup'];
+
+  return (
+    <ListItem sx={{ bgcolor: 'background.paper', mb: 1, borderRadius: 1 }}>
+      {isEditing ? (
+        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+          <TextField
+            name="name"
+            value={editedItem.name}
+            onChange={handleChange}
+            sx={{ mr: 1, flexGrow: 1 }}
+          />
+          <TextField
+            name="amount"
+            type="number"
+            value={editedItem.amount}
+            onChange={handleChange}
+            sx={{ mr: 1, width: '80px' }}
+            inputProps={{ min: 0.1, step: 0.1 }}
+          />
+          <FormControl sx={{ minWidth: 80, mr: 1 }}>
+            <Select
+              name="unit"
+              value={editedItem.unit}
+              onChange={handleChange}
+            >
+              {units.map(unit => (
+                <MenuItem key={unit} value={unit}>{unit}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <IconButton onClick={handleSave}>
+            <SaveIcon />
+          </IconButton>
+        </Box>
+      ) : (
+        <>
+          <ListItemText 
+            primary={item.name} 
+            secondary={`${item.amount} ${item.unit}`} 
+          />
+          <IconButton edge="end" aria-label="edit" onClick={handleEdit}>
+            <EditIcon />
+          </IconButton>
+          <IconButton edge="end" aria-label="delete" onClick={() => onDeleteItem(item.id)}>
+            <DeleteIcon />
+          </IconButton>
+        </>
+      )}
+    </ListItem>
+  );
+};
+
+export default PantryItem;
+
+Folder: src/components
+File: MealPlanning.js
+
+
+
+Folder: src/components
+File: ThemeRegistry.js
+
+'use client'
+
+import { ThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import theme from '../utils/theme';
+
+export default function ThemeRegistry({ children }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      {children}
+    </ThemeProvider>
+  );
+}
+
+Folder: src/components
+File: CustomImage.js
+
+import CustomImage from './CustomImage'
+import imageLoader from '../utils/image-loader'
+
+const CustomImage = (props) => {
+  return <Image loader={imageLoader} {...props} />
+}
+
+export default CustomImage
+
+Folder: src/components
+File: Home.js
+
+'use client'
+
+import React, { useState, useEffect } from 'react';
+import { Box, Typography, Button, TextField, Grid, Paper, Select, MenuItem, FormControl, InputLabel, Alert } from '@mui/material';
+import { signOut, signInWithGoogle } from '../utils/auth';
+import { auth, db } from '../utils/firebase';
+import { collection, addDoc, deleteDoc, doc, onSnapshot, updateDoc } from 'firebase/firestore';
+import PantryList from './PantryList';
+import RecipeSuggestions from './RecipeSuggestions';
+import FavoriteRecipes from './FavoriteRecipes';
+import NutritionalInfo from './NutritionalInfo';
+
+export default function Home() {
+    const [user, setUser] = useState(null);
+    const [items, setItems] = useState([]);
+    const [newItem, setNewItem] = useState({ name: '', amount: 1, unit: 'piece' });
+    const [error, setError] = useState('');
+    const [recipes, setRecipes] = useState([]);
+    const [favoriteRecipes, setFavoriteRecipes] = useState([]);
+  
+    useEffect(() => {
+      const unsubscribe = auth.onAuthStateChanged((user) => {
+        setUser(user);
+        if (user) {
+          const itemsRef = collection(db, 'users', user.uid, 'items');
+          const unsubscribeItems = onSnapshot(itemsRef, (snapshot) => {
+            const itemsList = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+            setItems(itemsList);
+          });
+  
+          const favoritesRef = collection(db, 'users', user.uid, 'favoriteRecipes');
+          const unsubscribeFavorites = onSnapshot(favoritesRef, (snapshot) => {
+            const favoritesList = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+            setFavoriteRecipes(favoritesList);
+          });
+  
+          return () => {
+            unsubscribeItems();
+            unsubscribeFavorites();
+          };
+        }
+      });
+      return () => unsubscribe();
+    }, []);
+  
+    const handleInputChange = (e) => {
+      const { name, value } = e.target;
+      setNewItem(prev => ({
+        ...prev,
+        [name]: name === 'amount' ? Number(value) : value
+      }));
+    };
+  
+    const addItem = async () => {
+      if (newItem.name.trim() === '') {
+        setError('Item name cannot be empty');
+        return;
+      }
+      if (newItem.amount <= 0) {
+        setError('Amount must be greater than 0');
+        return;
+      }
+      setError('');
+      if (user) {
+        await addDoc(collection(db, 'users', user.uid, 'items'), newItem);
+        setNewItem({ name: '', amount: 1, unit: 'piece' });
+      }
+    };
+  
+    const deleteItem = async (itemId) => {
+      if (user) {
+        await deleteDoc(doc(db, 'users', user.uid, 'items', itemId));
+      }
+    };
+  
+    const updateItem = async (updatedItem) => {
+      if (user) {
+        await updateDoc(doc(db, 'users', user.uid, 'items', updatedItem.id), updatedItem);
+      }
+    };
+  
+    const saveRecipe = async (recipe) => {
+      if (user) {
+        await addDoc(collection(db, 'users', user.uid, 'favoriteRecipes'), { recipe });
+      }
+    };
+  
+    const deleteRecipe = async (recipeId) => {
+      if (user) {
+        await deleteDoc(doc(db, 'users', user.uid, 'favoriteRecipes', recipeId));
+      }
+    };
+  
+    const units = ['piece', 'lb', 'oz', 'g', 'kg', 'ml', 'L', 'cup'];
+  
+    return (
+      <Box sx={{ p: 3 }}>
+        <Typography variant="h4" gutterBottom>
+          Pantry Tracker
+        </Typography>
+        {user ? (
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Paper elevation={3} sx={{ p: 2, mb: 2 }}>
+                <Typography>Welcome, {user.displayName}!</Typography>
+                <Button onClick={signOut}>Sign Out</Button>
+                <Box sx={{ mt: 2, display: 'flex', alignItems: 'flex-end' }}>
+                  <TextField 
+                    name="name"
+                    value={newItem.name}
+                    onChange={handleInputChange}
+                    label="New Item"
+                    sx={{ mr: 1, flexGrow: 1 }}
+                  />
+                  <TextField 
+                    name="amount"
+                    type="number"
+                    value={newItem.amount}
+                    onChange={handleInputChange}
+                    label="Amount"
+                    sx={{ mr: 1, width: '80px' }}
+                    inputProps={{ min: 0.1, step: 0.1 }}
+                  />
+                  <FormControl sx={{ minWidth: 80, mr: 1 }}>
+                    <InputLabel>Unit</InputLabel>
+                    <Select
+                      name="unit"
+                      value={newItem.unit}
+                      onChange={handleInputChange}
+                      label="Unit"
+                    >
+                      {units.map(unit => (
+                        <MenuItem key={unit} value={unit}>{unit}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <Button onClick={addItem} variant="contained">Add Item</Button>
+                </Box>
+                {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+              </Paper>
+              <PantryList items={items} onDeleteItem={deleteItem} onUpdateItem={updateItem} />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <RecipeSuggestions items={items} onSaveRecipe={saveRecipe} />
+              <FavoriteRecipes recipes={favoriteRecipes} onDeleteRecipe={deleteRecipe} />
+              <NutritionalInfo items={items} />
+            </Grid>
+          </Grid>
+        ) : (
+          <Button onClick={signInWithGoogle}>Sign In with Google</Button>
+        )}
+      </Box>
+    );
+  }
+
+Folder: src/components
+File: NutritionalInfo.js
+
+import React, { useState } from 'react';
+import { Button, Typography, CircularProgress, List, ListItem, ListItemText, Paper, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+
+const NutritionalInfo = ({ items }) => {
+  const [info, setInfo] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchNutritionalInfo = async () => {
+    setLoading(true);
+    const nutritionalInfo = [];
+    for (const item of items) {
+      try {
+        const response = await fetch('/api/getNutritionalInfo', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ item }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch nutritional information');
+        }
+
+        const data = await response.json();
+        nutritionalInfo.push({ name: item.name, info: data.info });
+      } catch (error) {
+        console.error("Error fetching nutritional information:", error);
+        nutritionalInfo.push({ name: item.name, info: "Error fetching information" });
+      }
+    }
+    setInfo(nutritionalInfo);
+    setLoading(false);
+  };
+
+  const formatNutritionalInfo = (infoText) => {
+    const lines = infoText.split('\n');
+    return lines.map((line, index) => {
+      line = line.replace(/\*\*/g, ''); // Remove all asterisks
+      if (line.startsWith('Calories:')) {
+        return <Typography key={index} variant="subtitle1" fontWeight="bold">{line}</Typography>;
+      } else if (line.startsWith('Macronutrients:')) {
+        return <Typography key={index} variant="subtitle1" fontWeight="bold" sx={{ mt: 1 }}>{line}</Typography>;
+      } else if (line.startsWith('Notable vitamins and minerals:')) {
+        return <Typography key={index} variant="subtitle1" fontWeight="bold" sx={{ mt: 1 }}>{line}</Typography>;
+      } else if (line.startsWith('Note:')) {
+        return <Typography key={index} variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>{line}</Typography>;
+      } else if (line.trim().startsWith('-')) {
+        return <Typography key={index} variant="body1" component="li" sx={{ ml: 2 }}>{line.trim().substring(1)}</Typography>;
+      } else {
+        return <Typography key={index} variant="body1">{line}</Typography>;
+      }
+    });
+  };
+
+  return (
+    <Paper elevation={3} sx={{ p: 2, mb: 2 }}>
+      <Typography variant="h6" gutterBottom>
+        Nutritional Information
+      </Typography>
+      <Button 
+        variant="contained" 
+        color="primary" 
+        onClick={fetchNutritionalInfo} 
+        disabled={loading || items.length === 0}
+      >
+        Get Nutritional Info
+      </Button>
+      {loading && <CircularProgress sx={{ ml: 2 }} />}
+      {info.length > 0 && (
+        <List>
+          {info.map((item, index) => (
+            <Accordion key={index}>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography>{item.name}</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                {formatNutritionalInfo(item.info)}
+              </AccordionDetails>
+            </Accordion>
+          ))}
+        </List>
+      )}
+    </Paper>
+  );
+};
+
+export default NutritionalInfo;
+
+Folder: src/components
+File: FavoriteRecipes.js
+
+import React, { useState } from 'react';
+import { List, ListItem, ListItemText, IconButton, Paper, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+
+const FavoriteRecipes = ({ recipes, onDeleteRecipe }) => {
+  const [selectedRecipe, setSelectedRecipe] = useState(null);
+
+  const handleOpenRecipe = (recipe) => {
+    setSelectedRecipe(recipe);
+  };
+
+  const handleCloseRecipe = () => {
+    setSelectedRecipe(null);
+  };
+
+  const formatRecipe = (recipeText) => {
+    const sections = recipeText.split('\n\n');
+    return sections.map((section, index) => (
+      <Typography key={index} variant="body1" paragraph>
+        {section.split('\n').map((line, lineIndex) => (
+          <React.Fragment key={lineIndex}>
+            {formatLine(line)}
+            <br />
+          </React.Fragment>
+        ))}
+      </Typography>
+    ));
+  };
+
+  const formatLine = (line) => {
+    // Bold text wrapped in **
+    line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    // Italic text wrapped in *
+    line = line.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    // Convert markdown-style lists to HTML lists
+    if (line.startsWith('* ')) {
+      line = '<li>' + line.substring(2) + '</li>';
+    }
+    return <span dangerouslySetInnerHTML={{ __html: line }} />;
+  };
+
+  return (
+    <Paper elevation={3} sx={{ p: 2, mb: 2 }}>
+      <Typography variant="h6" gutterBottom>
+        Favorite Recipes
+      </Typography>
+      <List>
+        {recipes.map((recipe) => (
+          <ListItem key={recipe.id} sx={{ cursor: 'pointer' }} onClick={() => handleOpenRecipe(recipe)}>
+            <ListItemText 
+              primary={formatLine(recipe.recipe.split('\n')[0])}
+              secondary={formatLine(recipe.recipe.split('\n').slice(1, 3).join(' '))}
+            />
+            <IconButton edge="end" aria-label="delete" onClick={(e) => {
+              e.stopPropagation();
+              onDeleteRecipe(recipe.id);
+            }}>
+              <DeleteIcon />
+            </IconButton>
+          </ListItem>
+        ))}
+      </List>
+      <Dialog open={!!selectedRecipe} onClose={handleCloseRecipe} maxWidth="md" fullWidth>
+        <DialogTitle>{selectedRecipe && formatLine(selectedRecipe.recipe.split('\n')[0])}</DialogTitle>
+        <DialogContent dividers>
+          {selectedRecipe && formatRecipe(selectedRecipe.recipe)}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseRecipe}>Close</Button>
+        </DialogActions>
+      </Dialog>
+    </Paper>
+  );
+};
+
+export default FavoriteRecipes;
+
+Folder: src/components
+File: RecipeSuggestions.js
+
+// import React, { useState } from 'react';
+// import { Button, TextField, Typography, Paper, CircularProgress, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+
+// const RecipeSuggestions = ({ items, onSaveRecipe }) => {
+//   const [recipe, setRecipe] = useState('');
+//   const [loading, setLoading] = useState(false);
+//   const [model, setModel] = useState('llama');
+
+//   const generateRecipe = async () => {
+//     setLoading(true);
+//     const ingredients = items.map(item => `${item.quantity} ${item.unit} of ${item.name}`).join(', ');
+    
+//     try {
+//       const response = await fetch(model === 'llama' ? '/api/generateRecipe' : '/api/generateRecipeGemini', {
+//         method: 'POST',
+//         headers: {
+//           'Content-Type': 'application/json',
+//         },
+//         body: JSON.stringify({ ingredients }),
+//       });
+
+//       if (!response.ok) {
+//         throw new Error('Failed to generate recipe');
+//       }
+
+//       const data = await response.json();
+//       setRecipe(data.recipe);
+//     } catch (error) {
+//       console.error("Error generating recipe:", error);
+//       setRecipe("Sorry, there was an error generating the recipe. Please try again later.");
+//     }
+//     setLoading(false);
+//   };
+
+//   return (
+//     <Paper elevation={3} sx={{ p: 2, mb: 2 }}>
+//       <Typography variant="h6" gutterBottom>
+//         Recipe Suggestions
+//       </Typography>
+//       <FormControl fullWidth sx={{ mb: 2 }}>
+//         <InputLabel>Model</InputLabel>
+//         <Select
+//           value={model}
+//           label="Model"
+//           onChange={(e) => setModel(e.target.value)}
+//         >
+//           <MenuItem value="llama">Llama 3.1</MenuItem>
+//           <MenuItem value="gemini">Gemini</MenuItem>
+//         </Select>
+//       </FormControl>
+//       <Button 
+//         variant="contained" 
+//         color="primary" 
+//         onClick={generateRecipe} 
+//         disabled={loading || items.length === 0}
+//       >
+//         Generate Recipe
+//       </Button>
+//       {loading && <CircularProgress sx={{ ml: 2 }} />}
+//       {recipe && (
+//         <>
+//           <TextField
+//             fullWidth
+//             multiline
+//             rows={10}
+//             value={recipe}
+//             variant="outlined"
+//             margin="normal"
+//             InputProps={{
+//               readOnly: true,
+//             }}
+//           />
+//           <Button
+//             variant="outlined"
+//             color="secondary"
+//             onClick={() => onSaveRecipe(recipe)}
+//           >
+//             Save Recipe
+//           </Button>
+//         </>
+//       )}
+//     </Paper>
+//   );
+// };
+
+// export default RecipeSuggestions;
+
+import React, { useState } from 'react';
+import { Button, TextField, Typography, Paper, CircularProgress, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+
+const RecipeSuggestions = ({ items, onSaveRecipe }) => {
+  const [recipe, setRecipe] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [model, setModel] = useState('llama');
+
+  const generateRecipe = async () => {
+    setLoading(true);
+    const ingredients = items.map(item => `${item.amount} ${item.unit} of ${item.name}`).join(', ');
+    
+    const prompt = `Given these ingredients: ${ingredients}, suggest a recipe that uses as many of them as possible. Format the response as follows:
+    Recipe Name: [Recipe Name]
+    Ingredients Used:
+    - [List of ingredients used]
+    Ingredients Not Used:
+    - [List of ingredients not used]
+    Additional Ingredients:
+    - [List of additional ingredients needed]
+    Instructions:
+    1. [Step 1]
+    2. [Step 2]
+    ...
+    Nutritional Information:
+    [Brief nutritional overview]`;
+
+    try {
+      const response = await fetch(model === 'llama' ? '/api/generateRecipe' : '/api/generateRecipeGemini', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ingredients, prompt }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate recipe');
+      }
+
+      const data = await response.json();
+      setRecipe(data.recipe);
+    } catch (error) {
+      console.error("Error generating recipe:", error);
+      setRecipe("Sorry, there was an error generating the recipe. Please try again later.");
+    }
+    setLoading(false);
+  };
+
+  const formatRecipe = (recipeText) => {
+    const sections = recipeText.split('\n\n');
+    return sections.map((section, index) => (
+      <Typography key={index} variant="body1" paragraph>
+        {section.split('\n').map((line, lineIndex) => (
+          <React.Fragment key={lineIndex}>
+            {line}
+            <br />
+          </React.Fragment>
+        ))}
+      </Typography>
+    ));
+  };
+
+  return (
+    <Paper elevation={3} sx={{ p: 2, mb: 2 }}>
+      <Typography variant="h6" gutterBottom>
+        Recipe Suggestions
+      </Typography>
+      <FormControl fullWidth sx={{ mb: 2 }}>
+        <InputLabel>Model</InputLabel>
+        <Select
+          value={model}
+          label="Model"
+          onChange={(e) => setModel(e.target.value)}
+        >
+          <MenuItem value="llama">Llama 3.1</MenuItem>
+          <MenuItem value="gemini">Gemini</MenuItem>
+        </Select>
+      </FormControl>
+      <Button 
+        variant="contained" 
+        color="primary" 
+        onClick={generateRecipe} 
+        disabled={loading || items.length === 0}
+      >
+        Generate Recipe
+      </Button>
+      {loading && <CircularProgress sx={{ ml: 2 }} />}
+      {recipe && (
+        <>
+          <Paper elevation={1} sx={{ p: 2, mt: 2, maxHeight: '400px', overflow: 'auto' }}>
+            {formatRecipe(recipe)}
+          </Paper>
+          <Button
+            variant="outlined"
+            color="secondary"
+            onClick={() => onSaveRecipe(recipe)}
+            sx={{ mt: 2 }}
+          >
+            Save Recipe
+          </Button>
+        </>
+      )}
+    </Paper>
+  );
+};
+
+export default RecipeSuggestions;
+
+Folder: src/components
+File: PantryList.js
+
+import React from 'react';
+import { List, Paper, Typography } from '@mui/material';
+import PantryItem from './PantryItem';
+
+const PantryList = ({ items, onDeleteItem, onUpdateItem }) => {
+  return (
+    <Paper elevation={3} sx={{ p: 2, mb: 2 }}>
+      <Typography variant="h6" gutterBottom>
+        Your Pantry Items
+      </Typography>
+      <List>
+        {items.map((item) => (
+          <PantryItem
+            key={item.id}
+            item={item}
+            onDeleteItem={onDeleteItem}
+            onUpdateItem={onUpdateItem}
+          />
+        ))}
+      </List>
+    </Paper>
+  );
+};
+
+export default PantryList;
+

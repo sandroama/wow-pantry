@@ -3,9 +3,9 @@ pantry-tracker/
     jsconfig.json
     .env.local
     next.config.mjs
+    aggregated_JS_code.txt
     aggregated_utils_code.txt
     README.md
-    aggregated_tsx_code.txt
     .gitignore
     package-lock.json
     package.json
@@ -15,17 +15,23 @@ pantry-tracker/
         vercel.svg
         next.svg
     src/
+        .DS_Store
         app/
             layout.js
             favicon.ico
+            .DS_Store
             page.js
             page.module.css
             globals.css
+            waitlist/
+                page.js
+            dashboard/
+                page.js
             api/
-                generateRecipeGemini.js
-                generateRecipe.js
-                getNutritionalInfo.js
+                .DS_Store
                 generateRecipeGemini/
+                    route.js
+                getNutritionalInfo/
                     route.js
                 generateRecipe/
                     route.js
@@ -34,9 +40,11 @@ pantry-tracker/
             theme.js
             firebase.js
         components/
+            IntroPage.js
             PantryItem.js
             MealPlanning.js
             ThemeRegistry.js
+            Home.js
             NutritionalInfo.js
             FavoriteRecipes.js
             RecipeSuggestions.js
