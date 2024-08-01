@@ -1,5 +1,16 @@
 import React, { useState } from 'react';
-import { ListItem, ListItemText, IconButton, TextField, Box, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import { 
+  ListItem, 
+  ListItemText, 
+  IconButton, 
+  TextField, 
+  Box, 
+  Select, 
+  MenuItem, 
+  FormControl, 
+  InputLabel,
+  Typography
+} from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
@@ -13,7 +24,7 @@ const PantryItem = ({ item, onDeleteItem, onUpdateItem }) => {
   };
 
   const handleSave = () => {
-    if (editedItem.amount <= 0) {
+    if (editedItem.quantity <= 0) {
       alert("Amount must be greater than 0");
       return;
     }
@@ -25,7 +36,7 @@ const PantryItem = ({ item, onDeleteItem, onUpdateItem }) => {
     const { name, value } = e.target;
     setEditedItem(prev => ({
       ...prev,
-      [name]: name === 'amount' ? Number(value) : value
+      [name]: name === 'quantity' ? Number(value) : value
     }));
   };
 
@@ -42,9 +53,9 @@ const PantryItem = ({ item, onDeleteItem, onUpdateItem }) => {
             sx={{ mr: 1, flexGrow: 1 }}
           />
           <TextField
-            name="amount"
+            name="quantity"
             type="number"
-            value={editedItem.amount}
+            value={editedItem.quantity}
             onChange={handleChange}
             sx={{ mr: 1, width: '80px' }}
             inputProps={{ min: 0.1, step: 0.1 }}
@@ -68,8 +79,13 @@ const PantryItem = ({ item, onDeleteItem, onUpdateItem }) => {
         <>
           <ListItemText 
             primary={item.name} 
-            secondary={`${item.amount} ${item.unit}`} 
+            secondary={`${item.quantity || ''} ${item.unit || ''}`} 
           />
+          <Typography variant="caption" sx={{ mr: 2 }}>
+            Added: {item.addedAt && typeof item.addedAt.toDate === 'function'
+              ? item.addedAt.toDate().toLocaleDateString()
+              : 'Date not available'}
+          </Typography>
           <IconButton edge="end" aria-label="edit" onClick={handleEdit}>
             <EditIcon />
           </IconButton>

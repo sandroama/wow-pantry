@@ -1,25 +1,20 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
-import { auth } from '../utils/firebase';
-import IntroPage from '../components/IntroPage';
-import Home from '../components/Home'; // We'll create this in the next step
+import { useEffect, useState } from 'react'
+import dynamic from 'next/dynamic'
+
+const Home = dynamic(() => import('../components/Home'), { ssr: false })
 
 export default function Page() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      setUser(user);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
+    setIsMounted(true)
+  }, [])
 
-  if (loading) {
-    return <div>Loading...</div>; // Or a loading spinner
+  if (!isMounted) {
+    return null // or a loading spinner
   }
 
-  return user ? <Home user={user} /> : <IntroPage />;
+  return <Home />
 }
