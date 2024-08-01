@@ -3,70 +3,47 @@ import { createTheme } from '@mui/material/styles';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#3498db',
+      main: '#4caf50',
       contrastText: '#ffffff',
     },
     secondary: {
-      main: '#2ecc71',
+      main: '#2196f3',
     },
     background: {
-      default: '#ecf0f1',
+      default: '#f5f5f5',
       paper: '#ffffff',
     },
     text: {
-      primary: '#2c3e50',
-      secondary: '#7f8c8d',
+      primary: '#333333',
+      secondary: '#666666',
     },
-    error: {
-      main: '#e74c3c',
+  },
+  typography: {
+    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+    h1: {
+      fontWeight: 700,
+    },
+    h2: {
+      fontWeight: 600,
+    },
+    h3: {
+      fontWeight: 600,
     },
   },
   components: {
-    MuiAppBar: {
-      styleOverrides: {
-        root: {
-          backgroundColor: '#3498db',
-        },
-      },
-    },
     MuiButton: {
       styleOverrides: {
         root: {
+          borderRadius: 8,
           textTransform: 'none',
-          fontWeight: 'bold',
-          borderRadius: '8px',
-        },
-        containedPrimary: {
-          backgroundColor: '#2ecc71',
-          '&:hover': {
-            backgroundColor: '#27ae60',
-          },
+          fontWeight: 600,
         },
       },
     },
-    MuiTextField: {
+    MuiPaper: {
       styleOverrides: {
         root: {
-          '& .MuiOutlinedInput-root': {
-            borderRadius: '8px',
-          },
-        },
-      },
-    },
-    MuiList: {
-      styleOverrides: {
-        root: {
-          borderRadius: '8px',
-          overflow: 'hidden',
-        },
-      },
-    },
-    MuiListItem: {
-      styleOverrides: {
-        root: {
-          '&:hover': {
-            backgroundColor: '#f5f5f5',
-          },
+          borderRadius: 8,
         },
       },
     },

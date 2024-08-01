@@ -1,23 +1,16 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Button, TextField, Grid, Paper, Select, MenuItem, FormControl, InputLabel, Alert } from '@mui/material';
+import { Box, Typography, Button, TextField, Grid, Paper, Select, MenuItem, FormControl, InputLabel, Alert, AppBar, Toolbar, IconButton, Container } from '@mui/material';
 import { signInWithGoogle, signInWithGitHub, signUpWithEmail, signInWithEmail, signOut } from '../utils/auth';
 import { auth, db } from '../utils/firebase';
-import { 
-  collection, 
-  addDoc, 
-  deleteDoc, 
-  doc, 
-  onSnapshot, 
-  updateDoc, 
-  getDocs, 
-  setDoc 
-} from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, onSnapshot, updateDoc, getDocs, setDoc } from 'firebase/firestore';
 import PantryList from './PantryList';
 import RecipeSuggestions from './RecipeSuggestions';
 import FavoriteRecipes from './FavoriteRecipes';
 import NutritionalInfo from './NutritionalInfo';
+import { motion } from 'framer-motion';
+import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 
 export default function DynamicComponents() {
   const [user, setUser] = useState(null);
@@ -86,7 +79,13 @@ export default function DynamicComponents() {
 
   const handleGoogleSignIn = async () => {
     try {
-      await signInWithGoogle();
+      const user = await signInWithGoogle();
+      if (user) {
+        // User signed in successfully
+      } else {
+        // User closed the popup or cancelled the sign-in
+        setError('Sign-in was cancelled. Please try again.');
+      }
     } catch (error) {
       setError(error.message);
     }
@@ -94,7 +93,13 @@ export default function DynamicComponents() {
 
   const handleGitHubSignIn = async () => {
     try {
-      await signInWithGitHub();
+      const user = await signInWithGitHub();
+      if (user) {
+        // User signed in successfully
+      } else {
+        // User closed the popup or cancelled the sign-in
+        setError('Sign-in was cancelled. Please try again.');
+      }
     } catch (error) {
       setError(error.message);
     }
@@ -206,92 +211,112 @@ export default function DynamicComponents() {
   const units = ['piece', 'lb', 'oz', 'g', 'kg', 'ml', 'L', 'cup'];
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Pantry Tracker
-      </Typography>
-      {user ? (
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Paper elevation={3} sx={{ p: 2, mb: 2 }}>
-              <Typography>Welcome, {user.email}!</Typography>
-              <Button onClick={handleSignOut}>Sign Out</Button>
-              <Box sx={{ mt: 2, display: 'flex', alignItems: 'flex-end' }}>
-                <TextField 
-                  name="name"
-                  value={newItem.name}
-                  onChange={handleInputChange}
-                  label="New Item"
-                  sx={{ mr: 1, flexGrow: 1 }}
-                />
-                <TextField 
-                  name="amount"
-                  type="number"
-                  value={newItem.amount}
-                  onChange={handleInputChange}
-                  label="Amount"
-                  sx={{ mr: 1, width: '80px' }}
-                  inputProps={{ min: 0.1, step: 0.1 }}
-                />
-                <FormControl sx={{ minWidth: 80, mr: 1 }}>
-                  <InputLabel>Unit</InputLabel>
-                  <Select
-                    name="unit"
-                    value={newItem.unit}
-                    onChange={handleInputChange}
-                    label="Unit"
-                  >
-                    {units.map(unit => (
-                      <MenuItem key={unit} value={unit}>{unit}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <Button onClick={addItem} variant="contained">Add Item</Button>
-              </Box>
-              {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+    <Box sx={{ bgcolor: '#f5f5f5', minHeight: '100vh' }}>
+      <AppBar position="static" color="primary" elevation={0}>
+        <Toolbar>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            WowPantry
+          </Typography>
+          {user && (
+            <IconButton color="inherit" onClick={handleSignOut}>
+              <ExitToAppIcon />
+            </IconButton>
+          )}
+        </Toolbar>
+      </AppBar>
+      <Container maxWidth="lg" sx={{ mt: 4 }}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          {user ? (
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <Paper elevation={3} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+                  <Typography variant="h5" gutterBottom>Add New Item</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-end', mb: 2 }}>
+                    <TextField 
+                      name="name"
+                      value={newItem.name}
+                      onChange={handleInputChange}
+                      label="New Item"
+                      sx={{ mr: 1, flexGrow: 1 }}
+                    />
+                    <TextField 
+                      name="amount"
+                      type="number"
+                      value={newItem.amount}
+                      onChange={handleInputChange}
+                      label="Amount"
+                      sx={{ mr: 1, width: '80px' }}
+                      inputProps={{ min: 0.1, step: 0.1 }}
+                    />
+                    <FormControl sx={{ minWidth: 80, mr: 1 }}>
+                      <InputLabel>Unit</InputLabel>
+                      <Select
+                        name="unit"
+                        value={newItem.unit}
+                        onChange={handleInputChange}
+                        label="Unit"
+                      >
+                        {units.map(unit => (
+                          <MenuItem key={unit} value={unit}>{unit}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Box>
+                  <Button onClick={addItem} variant="contained" fullWidth>Add Item</Button>
+                </Paper>
+                <PantryList items={items} onDeleteItem={deleteItem} onUpdateItem={updateItem} />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <RecipeSuggestions items={items} onSaveRecipe={saveRecipe} />
+                <FavoriteRecipes recipes={favoriteRecipes} onDeleteRecipe={deleteRecipe} />
+                <NutritionalInfo items={items} />
+              </Grid>
+            </Grid>
+          ) : (
+            <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
+              <Typography variant="h4" gutterBottom sx={{ color: '#333' }}>
+                Sign In or Sign Up
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <Button onClick={handleGoogleSignIn} variant="contained" fullWidth>Sign In with Google</Button>
+                </Grid>
+                <Grid item xs={12}>
+                  <Button onClick={handleGitHubSignIn} variant="contained" fullWidth>Sign In with GitHub</Button>
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField 
+                    label="Email" 
+                    value={email} 
+                    onChange={(e) => setEmail(e.target.value)} 
+                    fullWidth 
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField 
+                    label="Password" 
+                    type="password" 
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)} 
+                    fullWidth 
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <Button onClick={handleEmailSignUp} variant="contained" fullWidth>Sign Up</Button>
+                </Grid>
+                <Grid item xs={6}>
+                  <Button onClick={handleEmailSignIn} variant="contained" fullWidth>Sign In</Button>
+                </Grid>
+              </Grid>
             </Paper>
-            <PantryList items={items} onDeleteItem={deleteItem} onUpdateItem={updateItem} />
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <RecipeSuggestions items={items} onSaveRecipe={saveRecipe} />
-            <FavoriteRecipes recipes={favoriteRecipes} onDeleteRecipe={deleteRecipe} />
-            <NutritionalInfo items={items} />
-          </Grid>
-        </Grid>
-      ) : (
-        <Grid container spacing={2}>
-          <Grid item xs={12}>
-            <Button onClick={handleGoogleSignIn} variant="contained">Sign In with Google</Button>
-          </Grid>
-          <Grid item xs={12}>
-            <Button onClick={handleGitHubSignIn} variant="contained">Sign In with GitHub</Button>
-          </Grid>
-          <Grid item xs={12}>
-            <TextField 
-              label="Email" 
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
-              fullWidth 
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <TextField 
-              label="Password" 
-              type="password" 
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)} 
-              fullWidth 
-            />
-          </Grid>
-          <Grid item xs={6}>
-            <Button onClick={handleEmailSignUp} variant="contained">Sign Up</Button>
-          </Grid>
-          <Grid item xs={6}>
-            <Button onClick={handleEmailSignIn} variant="contained">Sign In</Button>
-          </Grid>
-        </Grid>
-      )}
-      {error && <Alert severity="error">{error}</Alert>}
+          )}
+          {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+        </motion.div>
+      </Container>
     </Box>
   );
 }
